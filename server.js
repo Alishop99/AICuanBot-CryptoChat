@@ -1,38 +1,46 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const axios = require("axios");
-require("dotenv").config();
 const { askOpenAI } = require("./utils/openai");
+const { getCryptoPrice } = require("./utils/crypto");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+const detectCoinRequest = (message) => {
+  const coins = ["bitcoin", "btc", "ethereum", "eth", "solana", "sol", "bnb", "dogecoin", "doge"];
+  return coins.find((c) => message.toLowerCase().includes(c));
+};
+
 app.post("/api/chat", async (req, res) => {
   const { message } = req.body;
 
-  // Simple keyword check
-  if (message.toLowerCase().includes("harga") || message.toLowerCase().includes("bitcoin")) {
-    try {
-      const { data } = await axios.get("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd");
-      const btc = data.bitcoin.usd;
-      const eth = data.ethereum.usd;
-      return res.json({
-        reply: `💰 Harga saat ini:\n🟠 BTC: $${btc}\n🔵 ETH: $${eth}`
-      });
-    } catch (error) {
-      return res.json({ reply: "Gagal mengambil data harga 😢" });
-    }
+  // Cek apakah permintaan harga crypto
+  const coin = detectCoinRequest(message);
+  if (coin) {
+    const coinMap = {
+      btc: "bitcoin",
+      eth: "ethereum",
+      sol: "solana",
+      bnb: "binancecoin",
+      doge: "dogecoin"
+    };
+
+    const coinId = coinMap[coin] || coin;
+    const priceInfo = await getCryptoPrice(coinId);
+    if (priceInfo) return res.json({ answer: priceInfo });
   }
 
-  // Otherwise, use AI
-  try {
-    const aiReply = await askOpenAI(message);
-    res.json({ reply: aiReply });
-  } catch (err) {
-    res.json({ reply: "Gagal menjawab 😓" });
+  // Fallback ke OpenAI jika bukan soal harga
+  const response = await askOpenAI(message);
+  if (response) {
+    res.json({ answer: response });
+  } else {
+    res.status(500).json({ answer: "Gagal menjawab 😓" });
   }
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`✅ Server running on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
