@@ -33,3 +33,6 @@
 
 ```bash
 git clone https://github.com/Alishop99/AICuanBot-CryptoChat.git
+
+Contoh
+https://signal.alishop.my.id/ai/
