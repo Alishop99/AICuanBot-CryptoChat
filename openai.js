@@ -19,7 +19,7 @@ async function askOpenAI(message) {
     );
     return res.data.choices[0].message.content;
   } catch (err) {
-    console.error("OpenAI error:", err.message);
+    console.error("❌ OpenAI Error:", err.response?.data || err.message);
     return null;
   }
 }
